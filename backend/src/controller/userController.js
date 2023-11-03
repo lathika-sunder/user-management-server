@@ -1,79 +1,115 @@
 const { response } = require("express");
 const UserSchema = require("../models/UserSchema");
 
-createUser = async (req, res) => {
-    const newUser = new UserSchema(req.body);
-    await newUser.save().then(
-        () => {
-            res.status(201).json({
-                message : "New User Created Successfully",
-            })
-        }
-    )
-        .catch(
-            (err) => {
-                res.status(500).json({
-                    message: err.message,   
-                })
-        }
-    );
-}
-
-updateUser = async (req, res) => {
+const createUser = async (req, res) => {
     try {
-        // console.log(req.body);
-        var userId = req.body.userId;
+        const newUser = new UserSchema(req.body);
+        await newUser.save();
+        res.status(201).json({
+            message: "New User Created Successfully",
+        });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message // Include the error message for debugging
+        });
+    }
+};
+
+
+const updateUser = async (req, res) => {
+    try {
+        const userId = req.body.userId;
         const filter = { userId: userId };
         const update = req.body;
-        //updation works even for wrong userID need to check, and some error handlings
-        await UserSchema.exists(filter).then((doc) => {
-            UserSchema.updateOne(filter, update).then(
-                () => {
-                    res.status(200).json({
-                        message : "Updated User successfully"
-                    })
-                }
-            )
-                .catch(
-                (err) => {
-                    res.status(500).json({
-                        message : err.message,
-                    })
-                }
-            );
-        });
 
-    }
-    catch (error) {
-        res.status(500).json({
-            error: error.message,
-        })
-    }
-}
-
-//delets user even if it is not present, requires error handling
-deleteUser = async (req, res) => {
-    userId = req.body.userId;
-    filter = { userId: userId };
-    await UserSchema.deleteOne(filter).then(
-        () => {
+        const userExists = await UserSchema.exists(filter);
+        if (userExists) {
+            await UserSchema.updateOne(filter, update);
             res.status(200).json({
-                message : "deletion Successful",
-            })
+                message: "Updated User successfully",
+            });
+        } else {
+            res.status(404).json({
+                message: "User not found",
+            });
         }
-    )
-    .catch(
-            (error) => {
-                res.status(500).json({
-                    message: error.message,
-                })
-        }
-    )
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 
-}
+const deleteUser = async (req, res) => {
+    try {
+        const userId = req.body.userId;
+        const filter = { userId: userId };
+
+        const userExists = await UserSchema.exists(filter);
+        if (userExists) {
+            await UserSchema.deleteOne(filter);
+            res.status(200).json({
+                message: "Deletion Successful",
+            });
+        } else {
+            res.status(404).json({
+                message: "User not found",
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+const getUsers = async (req, res) => {
+    try {
+        const users = await UserSchema.find(); 
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No users found' });
+        }
+
+        res.status(200).json(users);
+    } catch (error) {
+        
+        console.error('Error fetching users:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+
+
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    
+     const user = await UserSchema.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+  
+    res.status(200).json({ success: true, message: 'Login successful', user });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
 
 module.exports = {
     createUser,
     updateUser,
-    deleteUser
-}
+    deleteUser,
+    getUsers,
+    loginUser
+};

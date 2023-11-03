@@ -1,58 +1,50 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const hashPasswordMiddleware = require("../middleware/bcrypt.middleware");
 
-const email_regex = "^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"
-const UserSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema(
+  {
     userId: {
-        type: String,
-        required: true,
-        unique: true,
-        immutable: true,
+      type: String,
+      required: true,
+      unique: true,
+      immutable: true,
     },
     password: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     email: {
-        type: String,
-        required: true,
-        $regex: email_regex,
+      type: String,
+      required: true,
     },
     name: {
-        type: String,
-        maxlength: [100, "Name must be less than 100 characters"]
+      type: String,
+      maxlength: [100, "Name must be less than 100 characters"],
     },
-    contactNumber: 
-        {
-            countryCode: {
-                type: String,
-                maxlength: 3
-            },
-            phoneNumber: {
-                type: String,
-                maxlength: 12,
-            }
-        }
-    ,
+    contactNumber: {
+      countryCode: {
+        type: String,
+      },
+      phoneNumber: {
+        type: String,
+      },
+    },
     userType: {
-        type: String,
-        required: true,
-        default: "user"
+      type: String,
+      required: true,
+      default: "user",
     },
-    roleId: {
+    role: {
         type: String,
-        deafult: null,
-    },
+       enum: ['admin', 'super-admin'],
+      },
     isActive: {
-        type: Boolean,
-        default: true,
+      type: Boolean,
+      default: true,
     },
-    // profilePicture: {
-    //     data: Buffer,
-    //     contentType: String,
-    //     required: false,
-    // }
+  },
+  { timestamps: true }
+);
+UserSchema.pre("save", hashPasswordMiddleware);
 
-}, { timestamps: true });
-
-
-module.exports = mongoose.model("UserSchema", UserSchema);
+module.exports = mongoose.model("UserSchema", UserSchema, "users");
